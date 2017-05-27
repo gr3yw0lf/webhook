@@ -627,12 +627,22 @@ const (
 	MatchHashSHA1   string = "payload-hash-sha1"
 	MatchHashSHA256 string = "payload-hash-sha256"
 	IPWhitelist     string = "ip-whitelist"
+	XFFIPWhitelist  string = "xff-ip-whitelist"
 )
 
 // Evaluate MatchRule will return based on the type
 func (r MatchRule) Evaluate(headers, query, payload *map[string]interface{}, body *[]byte, remoteAddr string) (bool, error) {
 	if r.Type == IPWhitelist {
 		return CheckIPWhitelist(remoteAddr, r.IPRange)
+	}
+
+	if r.Type == XFFIPWhitelist {
+		if val, ok := (*headers)["X-Forwarded-For"]; ok {
+			if cidr, ok := val.(string); ok {
+				return CheckIPWhitelist(cidr, r.IPRange)
+			}
+		}
+		return false, nil
 	}
 
 	if arg, ok := r.Parameter.Get(headers, query, payload); ok {
